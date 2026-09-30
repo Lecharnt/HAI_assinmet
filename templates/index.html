@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game to Reality</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f3f6f5; }
+        .main-card {
+            border: 0;
+            border-radius: 18px;
+            padding: 30px;
+        }
+        .brand { color: #0d9488; font-weight: bold; }
+        .btn-main {
+            background: #0d9488;
+            color: white;
+            border: 0;
+        }
+        .btn-main:hover { background: #0f766e; color: white; }
+    </style>
+</head>
+<body>
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="brand">🎮 Game to Reality</h1>
+        <h4>Turn your gaming interests into real-world adventures.</h4>
+        <p class="text-muted">
+            Discover hobbies, build new skills, and find activities near you.
+        </p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <div class="card main-card shadow">
+        <form method="POST">
+            <div class="form-group">
+                <label for="games"><strong>Favorite Video Games</strong></label>
+                <textarea class="form-control" id="games" name="games"
+                    rows="3" required
+                    placeholder="Minecraft, Apex Legends, Zelda, Magic: The Gathering..."></textarea>
+                <small class="text-muted">Separate games with commas or new lines.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="steam"><strong>Steam Profile (Optional)</strong></label>
+                <input class="form-control" id="steam" name="steam"
+                    placeholder="Steam ID or profile URL">
+                <small class="text-muted">
+                    You can also just enter your favorite games above.
+                    Steam integration can be connected separately.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="location"><strong>Your General Location</strong></label>
+                <input class="form-control" id="location" name="location"
+                    required placeholder="Worcester, Massachusetts">
+                <small class="text-muted">
+                    Use a city, ZIP code, or public location. No home address needed.
+                </small>
+            </div>
+
+            <hr>
+            <h5>Optional Preferences</h5>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>Preferred Activity</label>
+                    <select class="form-control" name="indoor">
+                        <option>Either</option>
+                        <option>Indoor</option>
+                        <option>Outdoor</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-6">
+                    <label>Social Preference</label>
+                    <select class="form-control" name="social">
+                        <option>Small groups</option>
+                        <option>Solo</option>
+                        <option>Large groups</option>
+                        <option>Either</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-6">
+                    <label>Budget</label>
+                    <select class="form-control" name="budget">
+                        <option>Flexible</option>
+                        <option>Free</option>
+                        <option>Low-cost</option>
+                        <option>Moderate</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-6">
+                    <label>Physical Activity</label>
+                    <select class="form-control" name="activity">
+                        <option>Any</option>
+                        <option>Low</option>
+                        <option>Moderate</option>
+                        <option>High</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-6">
+                    <label>Experience Level</label>
+                    <select class="form-control" name="experience">
+                        <option>Beginner</option>
+                        <option>Intermediate</option>
+                        <option>Experienced</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-6">
+                    <label>Search Radius</label>
+                    <select class="form-control" name="radius">
+                        <option value="100">100 meters</option>
+                        <option value="1000">1 km</option>
+                        <option value="5000">5 km</option>
+                        <option value="10000">10 km</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-main btn-lg btn-block mt-3" type="submit">
+                Discover My Hobbies
+            </button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
