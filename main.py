@@ -45,106 +45,10 @@ def get_location(location):
         "name": results[0]["display_name"]
     }
 
-
-def find_places(lat, lon, radius, search_terms):
-    # Search OpenStreetMap for places matching hobby-related terms.
-    terms = {
-        "board games": ['"shop"="games"', '"amenity"="community_centre"'],
-        "tabletop games": ['"shop"="games"', '"amenity"="community_centre"'],
-        "paintball": ['"sport"="paintball"', '"leisure"="sports_centre"'],
-        "hiking": ['"route"="hiking"', '"leisure"="nature_reserve"'],
-        "climbing": ['"sport"="climbing"', '"leisure"="sports_centre"'],
-        "art": ['"craft"="art"', '"amenity"="arts_centre"'],
-        "pottery": ['"craft"="pottery"', '"amenity"="arts_centre"'],
-        "woodworking": ['"craft"="carpenter"', '"craft"="woodworking"'],
-        "martial arts": ['"sport"="martial_arts"', '"leisure"="sports_centre"'],
-        "sports": ['"leisure"="sports_centre"', '"leisure"="pitch"'],
-        "photography": ['"amenity"="arts_centre"'],
-        "robotics": ['"club"="robotics"', '"amenity"="community_centre"'],
-        "chess": ['"club"="chess"', '"amenity"="community_centre"'],
-        "theater": ['"amenity"="theatre"', '"amenity"="community_centre"'],
-        "gardening": ['"leisure"="garden"', '"community_garden"="yes"'],
-        "dance": ['"sport"="dance"', '"leisure"="dance"'],
-        "music": ['"amenity"="music_school"', '"amenity"="arts_centre"'],
-        "volunteering": ['"amenity"="community_centre"']
-    }
-
-    query_parts = []
-    for term in search_terms:
-        term = term.lower()
-        for hobby, tags in terms.items():
-            if hobby in term or term in hobby:
-                for tag in tags:
-                    query_parts.append(
-                        f'node(around:{radius},{lat},{lon})[{tag}];'
-                        f'way(around:{radius},{lat},{lon})[{tag}];'
-                    )
-
-    if not query_parts:
-        return []
-
-    query = "[out:json][timeout:20];(" + "".join(set(query_parts)) + ");out center tags;"
-
-    try:
-        response = requests.post(
-            OVERPASS_URL,
-            data={"data": query},
-            headers=HEADERS,
-            timeout=30
-        )
-        response.raise_for_status()
-        elements = response.json().get("elements", [])
-    except requests.RequestException:
-        return []
-
-    places = []
-    seen = set()
-
-    for element in elements:
-        tags = element.get("tags", {})
-        name = tags.get("name")
-
-        if not name or name in seen:
-            continue
-
-        place_lat = element.get("lat", element.get("center", {}).get("lat"))
-        place_lon = element.get("lon", element.get("center", {}).get("lon"))
-
-        if place_lat is None or place_lon is None:
-            continue
-
-        distance = math.sqrt(
-            ((float(place_lat) - lat) * 111320) ** 2 +
-            ((float(place_lon) - lon) * 111320 *
-             math.cos(math.radians(lat))) ** 2
-        )
-
-        if distance > radius:
-            continue
-
-        seen.add(name)
-        places.append({
-            "name": name,
-            "address": ", ".join(filter(None, [
-                tags.get("addr:housenumber"),
-                tags.get("addr:street"),
-                tags.get("addr:city")
-            ])) or "Address not listed",
-            "distance": round(distance),
-            "type": tags.get("sport") or tags.get("shop") or
-                    tags.get("leisure") or tags.get("amenity", "Activity"),
-            "website": tags.get("website"),
-            "lat": float(place_lat),
-            "lon": float(place_lon)
-        })
-
-    return sorted(places, key=lambda p: p["distance"])[:5]
-
-
 def generate_image(hobby):
     try:
         response = client.images.generate(
-            model="gpt-image-1",
+            model="gpt-image-2.5-sunburst-2026-09-08",
             prompt=(
                 f"Create a colorful, welcoming, high-quality illustration "
                 f"of people enjoying the real-world hobby of {hobby}. "
@@ -167,8 +71,27 @@ def generate_image(hobby):
 def index():
     if request.method == "GET":
         return render_template("index.html")
-
     games = request.form.get("games", "").strip()
+    steam_input = request.form.get("steam_id", "").strip()
+
+    if steam_input:
+        try:
+            steam_games = get_steam_games(steam_input)
+
+            if not steam_games:
+                raise ValueError("No games were found on this Steam profile.")
+
+            if games:
+                games += "\n"
+
+            games += "\n".join(steam_games)
+
+        except Exception as error:
+            print("Steam error:", error)
+            return render_template(
+                "index.html",
+                error=f"Could not retrieve Steam games: {error}"
+            )
     location = request.form.get("location", "").strip()
     indoor = request.form.get("indoor", "Either")
     social = request.form.get("social", "Small groups")
@@ -177,17 +100,17 @@ def index():
     experience = request.form.get("experience", "Beginner")
     radius = int(request.form.get("radius", 100))
 
-    if not games or not location:
+    if not games:
         return render_template(
             "index.html",
-            error="Please enter your favorite games and location."
+            error="Please enter your favorite games"
         )
 
     radius = radius if radius in [100, 1000, 5000, 10000] else 100
 
     try:
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-6-luna",
             response_format={"type": "json_object"},
             messages=[
                 {
@@ -254,19 +177,7 @@ def index():
             if isinstance(terms, str):
                 terms = [terms]
 
-            places = find_places(
-                coordinates["lat"],
-                coordinates["lon"],
-                radius,
-                terms + [hobby.get("hobby_name", "")]
-            )
-
-            hobby["places"] = places
             hobby["image"] = generate_image(hobby["hobby_name"])
-
-            for place in places:
-                place["hobby"] = hobby["hobby_name"]
-                data["map_points"].append(place)
 
         data["radius"] = radius
         data["games"] = games
@@ -280,6 +191,80 @@ def index():
             error="Something went wrong. Please try again."
         )
 
+def get_steam_games(steam_input):
+    api_key = os.getenv("STEAM_API_KEY")
+
+    if not api_key:
+        raise ValueError("Steam API key is missing from .env")
+
+    steam_input = steam_input.strip()
+    steam_id = None
+
+    # Accept a 17-digit Steam ID
+    if re.fullmatch(r"\d{17}", steam_input):
+        steam_id = steam_input
+
+    # Accept Steam profile URLs
+    elif "steamcommunity.com" in steam_input:
+        match = re.search(r"/profiles/(\d{17})", steam_input)
+
+        if match:
+            steam_id = match.group(1)
+        else:
+            match = re.search(r"/id/([^/?]+)", steam_input)
+
+            if match:
+                vanity_name = match.group(1)
+
+                response = requests.get(
+                    "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
+                    params={
+                        "key": api_key,
+                        "vanityurl": vanity_name
+                    },
+                    timeout=15
+                )
+                response.raise_for_status()
+                result = response.json()["response"]
+
+                if result.get("success") != 1:
+                    raise ValueError("Steam profile could not be found")
+
+                steam_id = result["steamid"]
+
+    if not steam_id:
+        raise ValueError(
+            "Enter a valid Steam ID or Steam profile URL"
+        )
+
+    # Retrieve the user's owned games
+    response = requests.get(
+        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
+        params={
+            "key": api_key,
+            "steamid": steam_id,
+            "include_appinfo": True,
+            "include_played_free_games": True
+        },
+        timeout=15
+    )
+    response.raise_for_status()
+
+    result = response.json().get("response", {})
+    games = result.get("games")
+
+    if games is None:
+        raise ValueError(
+            "Steam did not return a game library. "
+            "Check that your Game details privacy is Public."
+        )
+
+    return [
+        f"{game.get('name', 'Unknown game')} "
+        f"({round(game.get('playtime_forever', 0) / 60)} hours)"
+        for game in games
+        if game.get("name")
+    ]
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -107,9 +107,6 @@
                     <h6>💰 Estimated Cost</h6>
                     <p>{{ hobby.estimated_cost }}</p>
 
-                    <hr>
-                    <h5>📍 Nearby Places</h5>
-
                     {% if hobby.places %}
                         {% for place in hobby.places %}
                         <div class="border rounded p-2 mb-2">
@@ -137,16 +134,6 @@
             </div>
         </div>
         {% endfor %}
-    </div>
-
-    <div class="card section-card shadow-sm p-4 mb-4">
-        <h3>🗺️ Explore Nearby Places</h3>
-        <p class="text-muted">{{ data.location_name }}</p>
-        {% if data.map_points %}
-            <div id="map"></div>
-        {% else %}
-            <p>No mapped locations were found at this radius.</p>
-        {% endif %}
     </div>
 
     <div class="text-center">
