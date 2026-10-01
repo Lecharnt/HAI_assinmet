@@ -108,22 +108,146 @@
                     </select>
                 </div>
 
-                <div class="form-group col-md-6">
-                    <label>Search Radius</label>
-                    <select class="form-control" name="radius">
-                        <option value="100">100 meters</option>
-                        <option value="1000">1 km</option>
-                        <option value="5000">5 km</option>
-                        <option value="10000">10 km</option>
-                    </select>
-                </div>
             </div>
 
-            <button class="btn btn-main btn-lg btn-block mt-3" type="submit">
-                Discover My Hobbies
+            <button type="submit" class="btn btn-primary">
+                Discover Hobbies
             </button>
         </form>
     </div>
 </div>
+
+<!-- Loading Screen -->
+<div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+        <div class="spinner-border text-primary mb-4" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+
+        <h2>Finding Your Next Adventure</h2>
+        <p id="loading-message">
+            Analyzing your favorite games and interests...
+        </p>
+
+        <div class="progress mt-4">
+            <div
+                id="loading-bar"
+                class="progress-bar progress-bar-striped progress-bar-animated"
+                role="progressbar"
+                style="width: 0%"
+                aria-valuenow="0"
+                aria-valuemin="0"
+                aria-valuemax="100">
+            </div>
+        </div>
+
+        <p class="text-muted mt-3">
+            This may take a little while. Please don't refresh the page.
+        </p>
+    </div>
+</div>
+
+<style>
+    .loading-screen {
+        display: none;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.97);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .loading-content {
+        width: 85%;
+        max-width: 450px;
+        padding: 30px;
+    }
+
+    .loading-screen h2 {
+        font-weight: bold;
+        margin-bottom: 12px;
+    }
+
+    .loading-screen .progress {
+        height: 14px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .loading-screen .progress-bar {
+        transition: width 0.5s ease;
+    }
+</style>
+
+<script>
+    const form = document.querySelector("form");
+    const loadingScreen = document.getElementById("loading-screen");
+    const loadingBar = document.getElementById("loading-bar");
+    const loadingMessage = document.getElementById("loading-message");
+
+    let loadingInterval;
+
+    if (form) {
+        form.addEventListener("submit", function () {
+            // Prevent duplicate submissions
+            if (form.dataset.submitting === "true") {
+                return;
+            }
+
+            form.dataset.submitting = "true";
+
+            // Show loading screen
+            loadingScreen.style.display = "flex";
+
+            // Disable submit buttons
+            form.querySelectorAll('button[type="submit"], input[type="submit"]')
+                .forEach(button => {
+                    button.disabled = true;
+                    button.dataset.originalText =
+                        button.tagName === "INPUT" ? button.value : button.textContent;
+
+                    if (button.tagName === "INPUT") {
+                        button.value = "Generating...";
+                    } else {
+                        button.textContent = "Generating...";
+                    }
+                });
+
+            // Simulated progress, capped until the server responds
+            let progress = 0;
+
+            const messages = [
+                "Analyzing your favorite games and interests...",
+                "Discovering your transferable skills...",
+                "Finding hobbies that match your preferences...",
+                "Creating your personalized recommendations..."
+            ];
+
+            loadingInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 4;
+                    progress = Math.min(progress, 90);
+
+                    loadingBar.style.width = progress + "%";
+                    loadingBar.setAttribute(
+                        "aria-valuenow",
+                        Math.round(progress)
+                    );
+
+                    const messageIndex = Math.min(
+                        Math.floor(progress / 25),
+                        messages.length - 1
+                    );
+
+                    loadingMessage.textContent = messages[messageIndex];
+                }
+            }, 700);
+        });
+    }
+</script>
 </body>
 </html>

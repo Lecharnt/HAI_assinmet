@@ -161,15 +161,6 @@ def index():
         data["recommendations"] = data["recommendations"][:3]
 
         # Find the user's general location
-        coordinates = get_location(location)
-
-        if not coordinates:
-            return render_template(
-                "index.html",
-                error="We could not find that location. Try a city or ZIP code."
-            )
-
-        data["location_name"] = coordinates["name"]
         data["map_points"] = []
 
         for hobby in data["recommendations"]:
